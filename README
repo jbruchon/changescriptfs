@@ -1,0 +1,44 @@
+                    THE CHANGE SCRIPTING FUSE FILESYSTEM
+                    ====================================
+
+     If you have any questions, comments, or patches, send me an email:
+                               jody@jodybruchon.com
+
+FIXME: Write this README when the FS is working
+
+This is an overlay FUSE filesystem tracks write and delete operations
+and writes out a shell script with each operation. File writes cannot
+be directly tracked, so they are replaced with "echo" commands which
+can then be rewritten later if desired (or ignored.)
+
+An example session:
+
+$ mount.changescriptfs /home/user /mnt
+
+$ cd /mnt
+
+$ ls
+file1      ABC
+
+$ mv file1 file2
+
+$ ln file2 XYZ
+
+$ ln -f file2 ABC
+
+$ rm file2
+
+$ cd /
+
+$ umount /mnt
+
+
+The resulting script output would be:
+
+#!/bin/sh
+
+mv file1 file2
+rm ABC
+ln file2 ABC
+ln file2 XYZ
+rm file2

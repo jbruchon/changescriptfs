@@ -1,0 +1,3 @@
+* Detect file copying. This should be possible by watching what blocks are
+  read and written; a full file read and a full file write with identical
+  data hashes should be considered a 'cp' operation.
