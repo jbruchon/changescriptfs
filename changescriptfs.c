@@ -19,6 +19,8 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <libgen.h>
 #include <pthread.h>
@@ -63,10 +65,27 @@ static int changescriptfs_getattr(const char * const restrict path,
 }
 
 
+static int changescriptfs_opendir(const char * const restrict path, struct fuse_file_info *fi)
+{
+	DIR *dp;
+
+	errno = 0;
+	dp = opendir(path);
+
+	if (!dp) return errno;
+	fi->fh = (uintptr_t)dp;
+	return 0;
+}
+
+
 static int changescriptfs_readdir(const char * const restrict path,
 		void *buf, fuse_fill_dir_t filler,
 		off_t offset, struct fuse_file_info *fi)
 {
+	DIR *dp;
+	struct dirent *de;
+
+	dp = (DIR *)fi->fh;
 	return 0;
 }
 
@@ -82,7 +101,6 @@ static int changescriptfs_read(const char * const restrict path,
 		char * const restrict buf, size_t size,
 		off_t offset, struct fuse_file_info *fi)
 {
-	LOAD_WD();
 	return 0;
 }
 
@@ -91,7 +109,6 @@ static int changescriptfs_write(const char * const restrict path,
 		const char * const restrict buf,
 		size_t size, off_t offset, struct fuse_file_info *fi)
 {
-	LOAD_WD();
 	return size;
 }
 
@@ -99,14 +116,12 @@ static int changescriptfs_write(const char * const restrict path,
 static int changescriptfs_mknod(const char * const restrict path,
 		mode_t mode, dev_t dev)
 {
-	LOAD_WD();
 	return 0;
 }
 
 
 static int changescriptfs_unlink(const char * const restrict path)
 {
-	LOAD_WD();
 	return 0;
 }
 
@@ -114,14 +129,12 @@ static int changescriptfs_unlink(const char * const restrict path)
 static int changescriptfs_mkdir(const char * const restrict path,
 		mode_t mode)
 {
-	LOAD_WD();
 	return 0;
 }
 
 
 static int changescriptfs_rmdir(const char * const restrict path)
 {
-	LOAD_WD();
 	return 0;
 }
 
@@ -136,7 +149,6 @@ static int changescriptfs_utimens(const char * const restrict path,
 static int changescriptfs_truncate(const char * const restrict path,
 		off_t len)
 {
-	LOAD_WD();
 	return 0;
 }
 
@@ -174,6 +186,7 @@ static struct fuse_operations changescriptfs_oper = {
 	.getattr	= changescriptfs_getattr,
 /*	.readlink	= changescriptfs_readlink, */
 	.mknod		= changescriptfs_mknod,
+	.opendir	= changescriptfs_opendir,
 	.readdir	= changescriptfs_readdir,
 	.mkdir		= changescriptfs_mkdir,
 	.unlink		= changescriptfs_unlink,
@@ -220,19 +233,21 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	/* Pull hive file name from command line and pass to FUSE */
+	/* Get file name from command line and pass to FUSE */
 	xstrcpy(file, argv[argc-2]);
 
 	wd = (struct changescriptfs_data *) malloc(sizeof(struct changescriptfs_data));
 	if (!wd) goto oom;
 
-	script = open_script(file); /* FIXME */
+	wd->script = fopen(file, "wb"); /* FIXME */
 
 	if (!script) {
 		fprintf(stderr, "Error: couldn't open %s\n", file);
 		return EXIT_FAILURE;
 	}
+
 	i = fuse_main(argc, argv, &changescriptfs_oper, wd);
+
 	fclose(wd->script);
 	free(wd);
 	return i;
