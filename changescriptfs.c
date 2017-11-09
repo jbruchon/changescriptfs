@@ -65,19 +65,6 @@ static int changescriptfs_getattr(const char * const restrict path,
 }
 
 
-static int changescriptfs_opendir(const char * const restrict path, struct fuse_file_info *fi)
-{
-	DIR *dp;
-
-	errno = 0;
-	dp = opendir(path);
-
-	if (!dp) return errno;
-	fi->fh = (uintptr_t)dp;
-	return 0;
-}
-
-
 static int changescriptfs_readdir(const char * const restrict path,
 		void *buf, fuse_fill_dir_t filler,
 		off_t offset, struct fuse_file_info *fi)
@@ -85,8 +72,15 @@ static int changescriptfs_readdir(const char * const restrict path,
 	DIR *dp;
 	struct dirent *de;
 
-	dp = (DIR *)fi->fh;
-	return 0;
+	(void)offset;
+
+	errno = 0;
+	dp = opendir(path);
+	if (errno) return errno;
+	while ((de = readdir(dp))) filler(buf, de->d_name, NULL, 0);
+	closedir(dp);
+
+	return errno;
 }
 
 
@@ -186,7 +180,6 @@ static struct fuse_operations changescriptfs_oper = {
 	.getattr	= changescriptfs_getattr,
 /*	.readlink	= changescriptfs_readlink, */
 	.mknod		= changescriptfs_mknod,
-	.opendir	= changescriptfs_opendir,
 	.readdir	= changescriptfs_readdir,
 	.mkdir		= changescriptfs_mkdir,
 	.unlink		= changescriptfs_unlink,
@@ -218,7 +211,6 @@ int main(int argc, char *argv[])
 {
 	struct changescriptfs_data * restrict wd;
 	char file[4096];
-	FILE *script;
 	int i;
 
 	/* Show version and return successfully if requested */
@@ -241,7 +233,7 @@ int main(int argc, char *argv[])
 
 	wd->script = fopen(file, "wb"); /* FIXME */
 
-	if (!script) {
+	if (!wd->script) {
 		fprintf(stderr, "Error: couldn't open %s\n", file);
 		return EXIT_FAILURE;
 	}

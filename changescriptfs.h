@@ -33,13 +33,7 @@ struct changescriptfs_data {
 #define LOAD_WD() struct changescriptfs_data *wd; \
 		  wd = fuse_get_context()->private_data;
 
-/* Threaded mode mutex */
-#if ENABLE_THREADED
 #define LOCK() pthread_mutex_lock(wd->lock)
 #define UNLOCK() pthread_mutex_unlock(wd->lock)
-#else
-#define LOCK()
-#define UNLOCK()
-#endif
 
 #endif /* CHANGESCRIPTFS_H */
